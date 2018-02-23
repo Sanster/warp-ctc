@@ -52,13 +52,15 @@ root_path = os.path.realpath(os.path.dirname(__file__))
 
 tf_include = tf.sysconfig.get_include()
 tf_src_dir = os.environ["TENSORFLOW_SRC_PATH"]
-tf_includes = [tf_include, tf_src_dir]
+tf_includes = [tf_include, tf_src_dir, (tf_src_dir + "/tensorflow/contrib/makefile/downloads/nsync/public")]
 warp_ctc_includes = [os.path.join(root_path, '../include')]
 include_dirs = tf_includes + warp_ctc_includes
 
 extra_compile_args = ['-std=c++11', '-fPIC']
 # current tensorflow code triggers return type errors, silence those for now
 extra_compile_args += ['-Wno-return-type']
+# The following is neccessary to compile with G++5 as Tensorflow uses the old ABI.
+extra_compile_args += [ '-D_GLIBCXX_USE_CXX11_ABI=0']
 
 if (enable_gpu):
     extra_compile_args += ['-DWARPCTC_ENABLE_GPU']
@@ -92,7 +94,8 @@ ext = setuptools.Extension('warpctc_tensorflow.kernels',
                            library_dirs = [warp_ctc_path],
                            runtime_library_dirs = [os.path.realpath(warp_ctc_path)],
                            libraries = ['warpctc'],
-                           extra_compile_args = extra_compile_args)
+                           extra_compile_args = extra_compile_args,
+                           extra_link_args=['-L' + tf.sysconfig.get_lib(), '-ltensorflow_framework'])
 
 class build_tf_ext(orig_build_ext):
     def build_extensions(self):
